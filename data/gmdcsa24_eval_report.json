@@ -1,0 +1,152 @@
+{
+  "dataset": "GMDCSA-24",
+  "doi": "https://doi.org/10.5281/zenodo.13354453",
+  "sensitivity": "medium",
+  "total_clips": 5,
+  "tp": 3,
+  "fp": 0,
+  "tn": 2,
+  "fn": 0,
+  "accuracy_pct": 100.0,
+  "precision_pct": 100.0,
+  "recall_pct": 100.0,
+  "elapsed_sec": 27.9,
+  "clips": [
+    {
+      "subject": "Subject 1",
+      "category": "Fall",
+      "file": "01.mp4",
+      "ground_truth_fall": true,
+      "predicted_fall": true,
+      "correct": true,
+      "description": "Falling from sitting on the chair to the ground. Left side Fall. Full body not visible",
+      "classes": "Falling (SW)[3.4 to 6]; Sitting[0 to 3.4]",
+      "analyzed_frames": 51,
+      "states_sequence": [
+        "STANDING",
+        "FALLING",
+        "LYING",
+        "FALL DETECTED",
+        "MONITORING"
+      ],
+      "fall_detected": true,
+      "detection_time_sec": 3.79,
+      "max_confidence": 98.0,
+      "max_torso_angle": 88.3,
+      "max_body_angle": 75.8,
+      "cancelled_count": 0,
+      "keypoint_sources": [
+        "full_pose"
+      ]
+    },
+    {
+      "subject": "Subject 1",
+      "category": "Fall",
+      "file": "03.mp4",
+      "ground_truth_fall": true,
+      "predicted_fall": true,
+      "correct": true,
+      "description": "Falling from sitting on the chair to the ground. Left side fall",
+      "classes": "Falling (SW)[2.5 to 5]; Sitting[0 to 2.5]",
+      "analyzed_frames": 44,
+      "states_sequence": [
+        "STANDING",
+        "FALLING",
+        "LYING",
+        "FALL DETECTED"
+      ],
+      "fall_detected": true,
+      "detection_time_sec": 2.96,
+      "max_confidence": 98.0,
+      "max_torso_angle": 89.1,
+      "max_body_angle": 89.1,
+      "cancelled_count": 0,
+      "keypoint_sources": [
+        "full_pose",
+        "partial_pose"
+      ]
+    },
+    {
+      "subject": "Subject 1",
+      "category": "Fall",
+      "file": "05.mp4",
+      "ground_truth_fall": true,
+      "predicted_fall": true,
+      "correct": true,
+      "description": "Walking to falling. Right side fall",
+      "classes": "Falling (SW)[1.8 to 5]:; Walking[0 to 1.8]",
+      "analyzed_frames": 44,
+      "states_sequence": [
+        "STANDING",
+        "FALLING",
+        "LYING",
+        "FALL DETECTED"
+      ],
+      "fall_detected": true,
+      "detection_time_sec": 2.96,
+      "max_confidence": 98.0,
+      "max_torso_angle": 90.0,
+      "max_body_angle": 89.6,
+      "cancelled_count": 0,
+      "keypoint_sources": [
+        "full_pose"
+      ]
+    },
+    {
+      "subject": "Subject 1",
+      "category": "ADL",
+      "file": "01.mp4",
+      "ground_truth_fall": false,
+      "predicted_fall": false,
+      "correct": true,
+      "description": "Sitting on the bed to sleeping right side on the bed. Face towards camera",
+      "classes": "Sitting[0 to 1]; Sleeping[2 to 8]",
+      "analyzed_frames": 62,
+      "states_sequence": [
+        "STANDING",
+        "FALLING",
+        "LYING"
+      ],
+      "fall_detected": false,
+      "detection_time_sec": null,
+      "max_confidence": 0.0,
+      "max_torso_angle": 88.5,
+      "max_body_angle": 88.9,
+      "cancelled_count": 0,
+      "keypoint_sources": [
+        "full_pose"
+      ]
+    },
+    {
+      "subject": "Subject 1",
+      "category": "ADL",
+      "file": "05.mp4",
+      "ground_truth_fall": false,
+      "predicted_fall": false,
+      "correct": true,
+      "description": "Coming to the bed and reading book in the sitting position. Front view of the subject. One leg folded",
+      "classes": "Reading[6 to 10]; Sitting[3 to 10]; Walking[1 to 3]",
+      "analyzed_frames": 79,
+      "states_sequence": [
+        "MONITORING",
+        "STANDING",
+        "FALLING",
+        "STANDING",
+        "FALLING",
+        "LYING",
+        "STANDING"
+      ],
+      "fall_detected": false,
+      "detection_time_sec": null,
+      "max_confidence": 0.0,
+      "max_torso_angle": 56.1,
+      "max_body_angle": 35.4,
+      "cancelled_count": 2,
+      "keypoint_sources": [
+        "bbox_fallback",
+        "full_pose",
+        "partial_pose"
+      ]
+    }
+  ]
+}

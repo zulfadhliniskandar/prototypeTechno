@@ -1,0 +1,7 @@
+aiohttp>=3.10.0
+opencv-python>=4.10.0
+ultralytics>=8.3.0
+torch>=2.2.0
+numpy>=1.26.0
+pillow>=10.0.0
+requests>=2.31.0

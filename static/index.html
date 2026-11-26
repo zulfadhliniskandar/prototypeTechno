@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SafeWatch — Multi-Phone AI Elderly Home Monitoring</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230A8F8F'/><text x='50' y='66' font-size='44' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='white'>SW</text></svg>" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon">SW</div>
+        <div>
+          <div class="brand-title">SafeWatch</div>
+          <div class="brand-sub" id="brandSubtitle">Multi-Phone AI Home Monitoring</div>
+        </div>
+      </div>
+
+      <nav class="desktop-nav" aria-label="Main navigation">
+        <button class="nav-tab active" data-tab="home">🏠 Home</button>
+        <button class="nav-tab" data-tab="history">📋 History</button>
+        <button class="nav-tab" data-tab="cameras">📱 Phone Cameras</button>
+        <button class="nav-tab" data-tab="settings">⚙️ Settings</button>
+      </nav>
+
+      <div class="topbar-actions">
+        <div class="ws-pill" id="wsPill" title="Real-time WebSocket status">
+          <span class="ws-dot"></span>
+          <span class="ws-text">Live</span>
+        </div>
+        <button class="icon-btn" id="btnGuide" title="Setup Guide">❔</button>
+        <button class="icon-btn" id="btnAlertsBell" title="Pending Alerts">
+          🔔
+          <span class="badge-count" id="bellBadge" style="display:none">0</span>
+        </button>
+        <button class="btn btn-primary btn-sm" id="btnQuickConnect">+ Connect Phone IP</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- TAB 1: HOME DASHBOARD -->
+    <section id="tab-home" class="tab-panel active">
+      <div id="heroCard" class="hero-card clear">
+        <div class="hero-left">
+          <div class="hero-emoji" id="heroEmoji">✅</div>
+          <div>
+            <div class="hero-title" id="heroTitle">All Clear</div>
+            <div class="hero-sub" id="heroSub">Loading monitoring status...</div>
+          </div>
+        </div>
+        <div class="hero-actions" id="heroActions"></div>
+      </div>
+
+      <div class="quick-actions">
+        <button class="quick-btn" id="qaConnectPhone">
+          <span class="quick-icon">📱</span>
+          <span>Connect Phone by IP</span>
+        </button>
+        <a class="quick-btn" id="qaPhoneNodeLink" href="/phone-camera" target="_blank">
+          <span class="quick-icon">📷</span>
+          <span>Use This Device as Camera</span>
+        </a>
+        <a class="quick-btn" id="qaCallResident" href="tel:+60198765432">
+          <span class="quick-icon">📞</span>
+          <span id="qaCallLabel">Call Resident</span>
+        </a>
+        <button class="quick-btn" data-goto="history">
+          <span class="quick-icon">📋</span>
+          <span>Event History</span>
+        </button>
+        <button class="quick-btn" data-goto="settings">
+          <span class="quick-icon">🛡️</span>
+          <span>Consent &amp; Privacy</span>
+        </button>
+      </div>
+
+      <div class="dashboard-split">
+        <div>
+          <div class="section-header">
+            <div>
+              <div class="section-title">Live Phone Cameras</div>
+              <div class="muted" id="camCountLabel">0 phone cameras connected</div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <button class="chip active" data-cam-size="large">Large</button>
+              <button class="chip" data-cam-size="cinema">Cinema 1x</button>
+              <button class="chip" data-cam-size="compact">Compact</button>
+              <button class="btn btn-secondary btn-sm" data-goto="cameras">Manage Phones →</button>
+            </div>
+          </div>
+          <div id="homeCameraGrid" class="camera-grid"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">Recent Events</div>
+            <button class="btn btn-ghost btn-sm" data-goto="history">See All →</button>
+          </div>
+          <div id="homeEventList" class="event-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: EVENT HISTORY -->
+    <section id="tab-history" class="tab-panel">
+      <div class="card">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Event History &amp; Incident Evidence</div>
+            <div class="muted">Review captured fall photos, H.264 video clips, and caregiver response logs</div>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <button class="chip active" data-type="all">All</button>
+          <button class="chip" data-type="fall">🔴 Falls</button>
+          <button class="chip" data-type="inactivity">🟡 Inactivity</button>
+          <button class="chip" data-type="motion">🟢 Motion</button>
+          <select id="historyStatusFilter" class="input" style="width:auto; min-width:140px">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="resolved">Resolved</option>
+            <option value="false_alert">False Alert</option>
+          </select>
+          <select id="historyCameraFilter" class="input" style="width:auto; min-width:170px">
+            <option value="all">All Phone Cameras</option>
+          </select>
+        </div>
+
+        <div id="historyEventList" class="event-list"></div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PHONE CAMERAS (MULTI-IP CONNECTION) -->
+    <section id="tab-cameras" class="tab-panel">
+      <div class="card" style="margin-bottom:20px;">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Multi-Phone Camera Connection Hub</div>
+            <div class="muted">Connect multiple smartphones via IP address (IP Webcam / DroidCam / RTSP) or scan QR with any phone browser</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" id="btnScanWifi">🔍 Scan Wi-Fi for Phones</button>
+            <button class="btn btn-primary btn-sm" id="btnOpenConnectModal">+ Add Phone by IP</button>
+          </div>
+        </div>
+
+        <div id="scanResultsBox" style="display:none; margin-bottom:14px;"></div>
+
+        <div id="standbyNodesSection" style="display:none;">
+          <div class="muted" style="font-weight:700; margin-bottom:8px;">📲 Standby Browser Phones Ready to Pair by IP:</div>
+          <div id="standbyNodesList" class="event-list" style="margin-bottom:12px;"></div>
+        </div>
+      </div>
+
+      <div id="camerasFullGrid" class="camera-grid"></div>
+    </section>
+
+    <!-- TAB 4: SETTINGS, CONSENT & CONTACTS -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="settings-grid">
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">Caregiver Profile</div>
+          </div>
+          <form id="caregiverForm">
+            <div class="field">
+              <label>Caregiver Full Name</label>
+              <input class="input" id="cgName" required />
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input class="input" id="cgEmail" type="email" />
+            </div>
+            <div class="field">
+              <label>Phone Number</label>
+              <input class="input" id="cgPhone" />
+            </div>
+            <button class="btn btn-primary" type="submit">Save Caregiver Profile</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">Monitored Elderly Resident</div>
+          </div>
+          <form id="residentForm">
+            <div class="form-grid">
+              <div class="field">
+                <label>Resident Name</label>
+                <input class="input" id="resName" required />
+              </div>
+              <div class="field">
+                <label>Relationship</label>
+                <select class="input" id="resRelation">
+                  <option>Parent</option>
+                  <option>Grandparent</option>
+                  <option>Spouse</option>
+                  <option>Relative</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Resident Phone Number</label>
+              <input class="input" id="resPhone" />
+            </div>
+            <div class="field">
+              <label>Home Address</label>
+              <input class="input" id="resAddress" />
+            </div>
+            <div class="field">
+              <label>Medical Notes</label>
+              <textarea class="input" id="resMedical" rows="2"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Save Resident Info</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">🛡️ Consent &amp; Master Privacy</div>
+            <span class="pill pill-soft-green" id="consentBadge">Consent Active</span>
+          </div>
+          <p class="muted" id="consentMeta" style="margin-bottom:12px;">Informed consent recorded.</p>
+          <div class="toggle-row">
+            <div>
+              <strong>Pause All Phone Cameras</strong>
+              <div class="muted">Temporarily halt all recording &amp; AI monitoring</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="masterPauseToggle" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" id="btnOpenConsent">Review / Sign Consent</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-header">
+            <div class="section-title">System &amp; Storage Privacy</div>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>Fall Alert Sound (Siren/Chime)</strong>
+              <div class="muted">Play audio chime when a fall alert arrives</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setAlertSound" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>AI Skeleton Overlay</strong>
+              <div class="muted">Show pose keypoints on live feed &amp; snapshots</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setSkeletonOverlay" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="toggle-row">
+            <div>
+              <strong>Auto-Delete Old Clips</strong>
+              <div class="muted">Automatically delete media after retention period</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setAutoDelete" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="form-grid" style="margin-top:12px;">
+            <div class="field">
+              <label>Clip Retention (Days)</label>
+              <select class="input" id="setRetentionDays">
+                <option value="7">7 Days</option>
+                <option value="14">14 Days</option>
+                <option value="30">30 Days</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Alert Cooldown (Seconds)</label>
+              <input class="input" id="setCooldown" type="number" min="5" max="120" />
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm" id="btnSaveSystemSettings">Save Settings</button>
+            <button class="btn btn-outline btn-sm" id="btnPurgeNow">Purge Expired Clips</button>
+          </div>
+        </div>
+
+        <div class="card" style="grid-column: 1 / -1;">
+          <div class="section-header">
+            <div>
+              <div class="section-title">Emergency Contacts</div>
+              <div class="muted">Quick-dial contacts shown during fall alerts</div>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnAddContact">+ Add Contact</button>
+          </div>
+          <div id="contactsList" class="event-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="active" data-tab="home">🏠<span>Home</span></button>
+    <button data-tab="history">📋<span>History</span></button>
+    <button data-tab="cameras">📱<span>Phones</span></button>
+    <button data-tab="settings">⚙️<span>Settings</span></button>
+  </nav>
+
+  <!-- MODAL: CONNECT PHONE CAMERA BY IP -->
+  <div class="modal-backdrop" id="connectModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div class="section-title">📱 Connect Phone Camera by IP Address</div>
+        <button class="btn btn-ghost btn-sm" data-close="connectModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="method-tabs">
+          <button class="method-tab active" data-method="ip">1. Enter Phone IP</button>
+          <button class="method-tab" data-method="qr">2. Browser QR / URL</button>
+          <button class="method-tab" data-method="webcam">3. Local Test Feed</button>
+        </div>
+
+        <!-- Method 1: IP Address Connection -->
+        <div id="method-ip">
+          <p class="muted" style="margin-bottom:12px;">
+            Run an IP camera app on your phone (e.g. <strong>IP Webcam</strong>, <strong>DroidCam</strong>, or <strong>RTSP Camera</strong>), or enter the IP of a phone opened on <code>/phone-camera</code>. Add as many phones as needed!
+          </p>
+          <div class="form-grid">
+            <div class="field">
+              <label>Phone IP Address (or Stream URL)</label>
+              <input class="input" id="ipInput" placeholder="e.g. 192.168.1.50 or 127.0.0.1" />
+            </div>
+            <div class="field">
+              <label>Port</label>
+              <input class="input" id="portInput" type="number" value="8080" />
+            </div>
+            <div class="field">
+              <label>Room / Location</label>
+              <input class="input" id="roomInput" placeholder="e.g. Living Room, Bedroom, Kitchen" value="Living Room" />
+            </div>
+            <div class="field">
+              <label>Camera Name</label>
+              <input class="input" id="camNameInput" placeholder="e.g. Mum's Living Room Phone" />
+            </div>
+            <div class="field">
+              <label>Phone Camera App Preset</label>
+              <select class="input" id="presetInput">
+                <option value="auto">Auto-Detect (IP Webcam / DroidCam / RTSP)</option>
+                <option value="ip_webcam">IP Webcam (Android /video or /shot.jpg)</option>
+                <option value="droidcam">DroidCam (Port 4747)</option>
+                <option value="rtsp">RTSP Stream</option>
+                <option value="phone_node">SafeWatch Browser Node (/phone-camera)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Sensitivity</label>
+              <select class="input" id="sensInput">
+                <option value="medium" selected>Medium (Recommended)</option>
+                <option value="high">High (Faster trigger)</option>
+                <option value="low">Low (Fewer false alerts)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Username (optional)</label>
+              <input class="input" id="authUserInput" placeholder="Optional" />
+            </div>
+            <div class="field">
+              <label>Password (optional)</label>
+              <input class="input" id="authPassInput" type="password" placeholder="Optional" />
+            </div>
+          </div>
+
+          <div class="toggle-row" style="margin-bottom:12px;">
+            <div>
+              <strong>Motion-Contour Assist</strong>
+              <div class="muted">Optional silhouette fallback when person keypoints aren't visible</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="motionAssistInput" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="probePreviewBox" style="display:none; margin-bottom:14px; padding:12px; border-radius:12px; background:var(--bg);">
+            <div id="probeStatusText" style="font-weight:600; margin-bottom:8px;"></div>
+            <img id="probePreviewImg" style="max-height:200px; border-radius:10px; display:none;" alt="Phone preview" />
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-outline" type="button" id="btnTestProbe">🔍 Test IP Connection</button>
+            <button class="btn btn-primary" type="button" id="btnSubmitPhoneIp">✅ Connect Phone Camera</button>
+          </div>
+        </div>
+
+        <!-- Method 2: Zero-Install Mobile Browser QR -->
+        <div id="method-qr" style="display:none;">
+          <div class="qr-box">
+            <img id="qrImage" alt="QR code to phone camera page" />
+            <div style="flex:1; min-width:220px;">
+              <h3 style="margin-bottom:6px;">Turn Any Smartphone Into a Camera</h3>
+              <p class="muted" style="margin-bottom:10px;">
+                Open this URL on one or more phones connected to the same Wi-Fi. Each phone registers with its IP address and streams directly to SafeWatch AI.
+              </p>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+                <code id="phoneUrlText" style="background:#fff; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:13px;"></code>
+                <button class="btn btn-secondary btn-sm" id="btnCopyPhoneUrl">Copy URL</button>
+              </div>
+              <p class="muted">
+                <strong>Note for mobile browsers:</strong> Because browsers require HTTPS for camera access over Wi-Fi, tap <em>Advanced → Proceed</em> once if your phone warns about the local self-signed certificate.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Method 3: Local Webcam & GMDCSA-24 Dataset Replay -->
+        <div id="method-webcam" style="display:none;">
+          <p class="muted" style="margin-bottom:12px;">Connect this computer's webcam or replay a <strong>GMDCSA-24</strong> benchmark video clip (<a href="https://doi.org/10.5281/zenodo.13354453" target="_blank">Zenodo DOI</a>) to test the 4-state YOLOv11-Pose detector.</p>
+          <div class="form-grid">
+            <div class="field">
+              <label>Source Mode</label>
+              <select class="input" id="wcSourceMode">
+                <option value="webcam">Local PC Webcam</option>
+                <option value="video_file">GMDCSA-24 Dataset Video Replay</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Camera Name</label>
+              <input class="input" id="wcNameInput" value="Local Test Camera" />
+            </div>
+            <div class="field">
+              <label>Room</label>
+              <input class="input" id="wcRoomInput" value="Living Room" />
+            </div>
+            <div class="field" id="wcIndexField">
+              <label>Webcam Device Index</label>
+              <input class="input" id="wcIndexInput" value="0" />
+            </div>
+            <div class="field" id="wcDatasetField" style="display:none; grid-column: 1 / -1;">
+              <label>Select GMDCSA-24 Clip</label>
+              <select class="input" id="wcDatasetSelect"></select>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="btnSubmitWebcam">Connect Test Camera</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: FALL ALERT OVERLAY (LIVE PUSH) -->
+  <div class="modal-backdrop" id="fallAlertModal">
+    <div class="modal modal-lg">
+      <div class="modal-header alert-header">
+        <div>
+          <div style="font-size:20px; font-weight:800;">🚨 FALL DETECTED</div>
+          <div id="alertModalSub" style="font-size:13px; opacity:0.95;"></div>
+        </div>
+        <button class="btn btn-white btn-sm" data-close="fallAlertModal">Minimize</button>
+      </div>
+      <div class="modal-body">
+        <div id="alertMediaContainer" style="margin-bottom:14px;"></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;" id="alertMetaPills"></div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px;">
+          <a class="btn btn-primary" id="alertBtnCallResident" href="tel:">📞 Call Resident</a>
+          <a class="btn btn-danger" id="alertBtnCall999" href="tel:999">🚨 Call Emergency (999)</a>
+          <button class="btn btn-secondary" id="alertBtnSafe">✅ Mark as Safe</button>
+          <button class="btn btn-outline" id="alertBtnFalse">⚠️ False Alert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EVENT DETAIL & RESPONSE LOG -->
+  <div class="modal-backdrop" id="eventDetailModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div>
+          <div class="section-title" id="detailTitle">Incident Details</div>
+          <div class="muted" id="detailSub"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-close="eventDetailModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <button class="chip active" id="btnShowPhoto">📷 Incident Photo</button>
+          <button class="chip" id="btnShowVideo">🎬 Video Clip</button>
+        </div>
+        <div id="detailMediaBox" style="margin-bottom:16px;"></div>
+        <div id="detailMetaGrid" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;"></div>
+
+        <div class="section-title" style="font-size:15px; margin-bottom:6px;">Response Log</div>
+        <div class="timeline" id="detailTimeline"></div>
+
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <input class="input" id="detailNoteInput" placeholder="Add caregiver note (e.g. Called neighbour to check)" />
+          <button class="btn btn-secondary btn-sm" id="btnAddEventLog">Add Log</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a class="btn btn-outline btn-sm" id="detailDownloadPhoto" download>⬇️ Photo</a>
+        <a class="btn btn-outline btn-sm" id="detailDownloadVideo" download style="display:none;">⬇️ Video Clip</a>
+        <button class="btn btn-outline btn-sm" id="detailFalseBtn">False Alert</button>
+        <button class="btn btn-success btn-sm" id="detailResolveBtn">Mark Resolved</button>
+        <button class="btn btn-danger btn-sm" id="detailDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EXPANDED LARGE CAMERA THEATER VIEW -->
+  <div class="modal-backdrop" id="cameraExpandModal">
+    <div class="modal modal-xl">
+      <div class="modal-header">
+        <div>
+          <div class="section-title" id="expandCamTitle">Large Camera View</div>
+          <div class="muted" id="expandCamSub"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-close="cameraExpandModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="state-stepper" id="expandStateStepper">
+          <div class="state-step" data-step="STANDING">1. STANDING</div>
+          <div class="state-step" data-step="FALLING">2. FALLING</div>
+          <div class="state-step" data-step="LYING">3. LYING</div>
+          <div class="state-step" data-step="FALL DETECTED">4. FALL DETECTED</div>
+        </div>
+        <div class="expand-feed-wrap">
+          <img id="expandFeedImg" alt="Expanded live phone stream" />
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;" id="expandTelemetryPills"></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline btn-sm" id="expandBtnTest">🧪 Test Fall</button>
+            <button class="btn btn-outline btn-sm" id="expandBtnPause">⏸️ Pause</button>
+            <button class="btn btn-secondary btn-sm" id="expandBtnConfig">⚙️ Configure</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMERA SETTINGS & ROI ZONE -->
+  <div class="modal-backdrop" id="cameraConfigModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <div>
+          <div class="section-title" id="cfgCamTitle">Camera Configuration</div>
+          <div class="muted" id="cfgCamIp"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-close="cameraConfigModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom:14px;">
+          <div class="section-header" style="margin-bottom:6px;">
+            <span style="font-size:13.5px; font-weight:700;">Detection Zone (Drag on image to restrict monitoring area)</span>
+            <button class="btn btn-ghost btn-sm" id="btnResetRoi">Reset Full Frame</button>
+          </div>
+          <div class="roi-stage" id="roiStage">
+            <img id="cfgPreviewImg" alt="Camera feed" />
+            <div class="roi-rect" id="roiRect"></div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Camera Name</label>
+            <input class="input" id="cfgName" />
+          </div>
+          <div class="field">
+            <label>Room</label>
+            <input class="input" id="cfgRoom" />
+          </div>
+          <div class="field">
+            <label>Phone IP Address</label>
+            <input class="input" id="cfgIp" />
+          </div>
+          <div class="field">
+            <label>Sensitivity</label>
+            <select class="input" id="cfgSensitivity">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toggle-row">
+          <span><strong>AI Fall Detection</strong></span>
+          <label class="switch"><input type="checkbox" id="cfgFall" /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span><strong>Inactivity Alert</strong></span>
+          <label class="switch"><input type="checkbox" id="cfgInactivity" /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span><strong>Motion Event Logging</strong></span>
+          <label class="switch"><input type="checkbox" id="cfgMotion" /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span><strong>Motion-Contour Assist</strong> (for far range / non-human test figures)</span>
+          <label class="switch"><input type="checkbox" id="cfgMotionAssist" /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <span><strong>Pause This Camera</strong></span>
+          <label class="switch"><input type="checkbox" id="cfgPaused" /><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger btn-sm" id="btnDeleteCamera">Remove Camera</button>
+        <button class="btn btn-outline btn-sm" id="btnRunCamTest">🧪 Run Test Fall Alert</button>
+        <button class="btn btn-primary btn-sm" id="btnSaveCameraCfg">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONSENT AGREEMENT -->
+  <div class="modal-backdrop" id="consentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="section-title">🛡️ Consent &amp; Privacy Agreement</div>
+        <button class="btn btn-ghost btn-sm" data-close="consentModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+          <div class="card" style="padding:12px; background:var(--primary-light); border:none;">
+            📷 Phone cameras are placed only in agreed living spaces.
+          </div>
+          <div class="card" style="padding:12px; background:var(--bg); border:none;">
+            🔔 Photos and short video clips are saved <strong>only when a fall or unusual event is detected</strong>.
+          </div>
+          <div class="card" style="padding:12px; background:var(--bg); border:none;">
+            ⏸️ The resident or caregiver can pause or remove cameras at any time.
+          </div>
+        </div>
+        <div class="field">
+          <label>Agreed Rooms (comma separated)</label>
+          <input class="input" id="consentRoomsInput" value="Living Room, Hallway, Bedroom" />
+        </div>
+        <div class="field">
+          <label>Resident Confirmation PIN</label>
+          <input class="input" id="consentPinInput" placeholder="4-digit PIN" value="1234" />
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer;">
+          <input type="checkbox" id="consentAgreeCheck" checked />
+          I understand and agree to the monitoring arrangement
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="consentModal">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveConsent">I Agree &amp; Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD EMERGENCY CONTACT -->
+  <div class="modal-backdrop" id="contactModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="section-title">Add Emergency Contact</div>
+        <button class="btn btn-ghost btn-sm" data-close="contactModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label>Name</label><input class="input" id="newContactName" placeholder="e.g. Kak Lina" /></div>
+        <div class="field"><label>Relationship</label><input class="input" id="newContactRel" placeholder="e.g. Sister / Neighbour" /></div>
+        <div class="field"><label>Phone Number</label><input class="input" id="newContactPhone" placeholder="+601..." /></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close="contactModal">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveContact">Save Contact</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SETUP GUIDE / ONBOARDING -->
+  <div class="modal-backdrop" id="guideModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="section-title">How to Connect Multiple Phone Cameras</div>
+        <button class="btn btn-ghost btn-sm" data-close="guideModal">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+        <div class="card" style="padding:14px; background:var(--primary-light); border:none;">
+          <strong>Option A — Connect Phones via IP Address (IP Webcam / DroidCam)</strong>
+          <p class="muted" style="color:var(--dark); margin-top:4px;">
+            Install <em>IP Webcam</em> on Phone 1, Phone 2, etc. Tap <em>Start server</em> on each phone to see its IP (e.g. <code>192.168.1.50:8080</code>). Click <strong>+ Connect Phone IP</strong> in SafeWatch and add each phone to its room.
+          </p>
+        </div>
+        <div class="card" style="padding:14px; background:var(--bg); border:none;">
+          <strong>Option B — Zero-Install Phone Browser Camera</strong>
+          <p class="muted" style="color:var(--dark); margin-top:4px;">
+            Scan the QR code in <strong>+ Connect Phone IP → Browser QR</strong> from any smartphone. Each phone registers with its IP address and streams live to SafeWatch's YOLOv11-Pose fall detector.
+          </p>
+        </div>
+        <div class="card" style="padding:14px; background:var(--bg); border:none;">
+          <strong>Automatic Photo &amp; Video Evidence</strong>
+          <p class="muted" style="color:var(--dark); margin-top:4px;">
+            When any connected phone detects a fall, SafeWatch immediately captures a photo + H.264 MP4 video clip and pushes an audible real-time alert to this caregiver dashboard.
+          </p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-close="guideModal">Got It</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

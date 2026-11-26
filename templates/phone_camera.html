@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SafeWatch — Phone Camera Node</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230A8F8F'/><text x='50' y='66' font-size='44' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='white'>SW</text></svg>" />
+  <style>
+    :root {
+      --primary: #0A8F8F;
+      --alert: #E74C3C;
+      --success: #27AE60;
+      --warning: #F39C12;
+      --bg: #0F172A;
+      --card: #1E293B;
+      --text: #F8FAFC;
+      --muted: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      gap: 14px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .logo {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--primary); display: grid; place-items: center;
+      font-weight: 800;
+    }
+    .ip-badge {
+      background: rgba(255,255,255,0.1);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+    }
+    .viewfinder {
+      position: relative;
+      background: #020617;
+      border-radius: 18px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+      max-height: 68vh;
+      display: grid;
+      place-items: center;
+      border: 2px solid #334155;
+    }
+    .viewfinder.alert-border {
+      border-color: var(--alert);
+      box-shadow: 0 0 28px rgba(231, 76, 60, 0.55);
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .hud {
+      position: absolute;
+      top: 12px; left: 12px; right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 700;
+      background: rgba(15, 23, 42, 0.8);
+    }
+    .status-pill.online { background: rgba(39, 174, 96, 0.9); }
+    .status-pill.fall { background: rgba(231, 76, 60, 0.95); }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { font-size: 12.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #0F172A;
+      color: #fff;
+      font-size: 14px;
+    }
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+    }
+    .btn-primary { background: var(--primary); }
+    .btn-danger { background: var(--alert); }
+    .btn-secondary { background: #334155; }
+    .warning-banner {
+      background: rgba(243, 156, 18, 0.16);
+      border: 1px solid var(--warning);
+      color: #FDE68A;
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 13px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <div class="logo">SW</div>
+      <div>
+        <div style="font-weight:700;">SafeWatch Phone Camera</div>
+        <div style="font-size:12px; color:var(--muted);">Mobile Sensor Node</div>
+      </div>
+    </div>
+    <div class="ip-badge" id="phoneIpBadge">IP: Detecting...</div>
+  </div>
+
+  <div class="warning-banner" id="httpsBanner">
+    <strong>Camera requires HTTPS on mobile browsers:</strong>
+    <div id="httpsMsg" style="margin:6px 0;"></div>
+    <button class="btn btn-primary" id="btnSwitchHttps" style="padding:8px 12px; font-size:13px;">Switch to HTTPS Camera URL</button>
+  </div>
+
+  <div class="viewfinder" id="viewfinder">
+    <video id="camVideo" autoplay muted playsinline></video>
+    <div class="hud">
+      <span class="status-pill" id="connPill">Standby</span>
+      <span class="status-pill" id="aiPill">AI Idle</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Room Location</label>
+        <input id="nodeRoom" value="Living Room" placeholder="e.g. Living Room" />
+      </div>
+      <div>
+        <label>Camera Label</label>
+        <input id="nodeName" value="Phone Camera 1" placeholder="e.g. Mum's Living Room" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Camera Lens</label>
+        <select id="facingSelect">
+          <option value="environment">Rear Camera</option>
+          <option value="user">Front Camera</option>
+        </select>
+      </div>
+      <div>
+        <label>Stream Rate (FPS)</label>
+        <select id="fpsSelect">
+          <option value="4">4 FPS (Battery Saver)</option>
+          <option value="6" selected>6 FPS (Balanced)</option>
+          <option value="10">10 FPS (High Responsiveness)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <button class="btn btn-primary" id="btnStart">▶ Start Camera &amp; Connect</button>
+      <button class="btn btn-danger" id="btnStop" disabled>■ Stop</button>
+    </div>
+    <div style="font-size:12px; color:var(--muted); text-align:center;" id="nodeHint">
+      Keep this phone plugged in on a stand. Screen wake lock activates automatically when streaming.
+    </div>
+  </div>
+
+  <canvas id="captureCanvas" style="display:none;"></canvas>
+  <script src="/static/js/phone_camera.js"></script>
+</body>
+</html>
