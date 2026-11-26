@@ -326,6 +326,52 @@ async def test_full_stack_and_browser() -> None:
                 alert_msgs = [m for m in ws_alerts if m.get("type") == "new_alert"]
                 assert len(alert_msgs) >= 2, f"Expected >=2 WS alerts, got {len(alert_msgs)}"
 
+                # Test Service Worker script route & headers
+                async with session.get(f"{base}/sw.js") as r:
+                    assert r.status == 200
+                    assert "javascript" in r.headers["Content-Type"]
+                    assert r.headers.get("Service-Worker-Allowed") == "/"
+                    sw_code = await r.text()
+                    assert "displayNotification" in sw_code
+                    assert "notificationclick" in sw_code
+                print("[PASS] Service Worker served with valid headers and notification handlers")
+
+                # Test Web App Manifest route
+                async with session.get(f"{base}/manifest.json") as r:
+                    assert r.status == 200
+                    manifest_data = await r.json()
+                    assert manifest_data["short_name"] == "SafeWatch"
+                    assert manifest_data["display"] == "standalone"
+                print("[PASS] Web App Manifest served with standalone PWA support")
+
+                # Test Notification Subscription endpoint
+                async with session.post(
+                    f"{base}/api/notifications/subscribe",
+                    json={
+                        "endpoint": "https://fcm.googleapis.com/fcm/send/caregiver-token-123",
+                        "keys": {"p256dh": "key-p256", "auth": "key-auth"},
+                        "device_name": "Caregiver Samsung S24",
+                    },
+                ) as r:
+                    assert r.status == 200
+                    sub_res = await r.json()
+                    assert sub_res["status"] == "subscribed"
+
+                async with session.get(f"{base}/api/notifications/status") as r:
+                    assert r.status == 200
+                    notif_status = await r.json()
+                    assert notif_status["supported"] is True
+                    assert notif_status["subscriptions_count"] >= 1
+                print("[PASS] Caregiver device notification subscription persisted in DB")
+
+                # Test background / sleep mode test notification dispatch
+                async with session.post(f"{base}/api/notifications/test") as r:
+                    assert r.status == 200
+                    test_notif = await r.json()
+                    assert test_notif["status"] == "dispatched"
+                    assert "🚨 SafeWatch Fall Alert" in test_notif["event"]["notification_title"]
+                print("[PASS] Instant test notification dispatch confirmed")
+
                 # Playwright Real Browser E2E Verification
                 from playwright.async_api import async_playwright
 
@@ -340,7 +386,7 @@ async def test_full_stack_and_browser() -> None:
                     )
                     context = await browser.new_context(
                         viewport={"width": 1280, "height": 840},
-                        permissions=["camera"],
+                        permissions=["camera", "notifications"],
                     )
                     page = await context.new_page()
                     errors: list[str] = []
@@ -391,6 +437,14 @@ async def test_full_stack_and_browser() -> None:
 
                     # Switch to Settings tab and add emergency contact
                     await page.locator('.desktop-nav [data-tab="settings"]').click()
+                    assert await page.locator("#btnHeaderNotify").is_visible()
+                    assert await page.locator("#notifStatusPill").is_visible()
+                    assert await page.locator("#setLockscreenNotify").is_checked()
+                    await page.click("#btnTestNotification")
+                    await page.wait_for_selector("#fallAlertModal.open", timeout=5000)
+                    await page.click("#fallAlertModal [data-close='fallAlertModal']")
+                    await page.wait_for_timeout(400)
+
                     await page.click("#btnAddContact")
                     await page.fill("#newContactName", "Dr. Nadia")
                     await page.fill("#newContactRel", "Family Doctor")

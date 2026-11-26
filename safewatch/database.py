@@ -251,6 +251,8 @@ class Database:
             d.pop("consent_pin", None)
             return d
 
+    get_resident = get_resident_profile
+
     def update_resident_profile(self, data: dict[str, Any]) -> dict[str, Any]:
         now = utc_now_iso()
         with self._lock:

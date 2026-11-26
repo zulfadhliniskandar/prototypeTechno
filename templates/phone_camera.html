@@ -126,6 +126,36 @@
       font-size: 13px;
       display: none;
     }
+
+    /* Phone camera responsive adjustments */
+    @media (max-width: 480px) {
+      body { padding: 10px; gap: 10px; }
+      .header { gap: 6px; }
+      .logo { width: 30px; height: 30px; border-radius: 8px; font-size: 12px; }
+      .header .brand div:first-of-type { font-size: 14px; }
+      .header .brand div:last-of-type { font-size: 11px; }
+      .ip-badge { padding: 4px 8px; font-size: 11px; }
+      .viewfinder { border-radius: 12px; max-height: 55vh; }
+      .hud { top: 8px; left: 8px; right: 8px; }
+      .status-pill { padding: 4px 8px; font-size: 11px; }
+      .card { padding: 12px; border-radius: 12px; gap: 10px; }
+      .row { gap: 8px; }
+      label { font-size: 11.5px; }
+      input, select { padding: 8px 10px; font-size: 13px; }
+      .btn { padding: 10px 14px; font-size: 14px; border-radius: 10px; }
+      #nodeHint { font-size: 11px; }
+      .warning-banner { padding: 10px; font-size: 12px; border-radius: 10px; }
+    }
+
+    @media (max-width: 360px) {
+      .row { grid-template-columns: 1fr; }
+      .viewfinder { max-height: 45vh; aspect-ratio: 4 / 3; }
+    }
+
+    @media (min-width: 768px) {
+      body { max-width: 720px; margin: 0 auto; padding: 20px; gap: 16px; }
+      .viewfinder { max-height: 60vh; }
+    }
   </style>
 </head>
 <body>

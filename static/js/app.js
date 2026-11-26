@@ -19,6 +19,9 @@
     editingCamera: null,
     editingRoi: { x: 0, y: 0, w: 1, h: 1 },
     ws: null,
+    swRegistration: null,
+    notificationPermission: "default",
+    dismissedNotificationBanner: false,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -65,6 +68,8 @@
     }
   }
 
+  let alarmInterval = null;
+
   function playAlertTone() {
     if (state.settings.alert_sound === false) return;
     try {
@@ -82,6 +87,230 @@
         osc.stop(ctx.currentTime + idx * 0.18 + 0.16);
       });
     } catch {}
+  }
+
+  function startEmergencyAlarm() {
+    if ($("setEmergencySiren") && !$("setEmergencySiren").checked) return;
+    if (state.settings.alert_sound === false) return;
+    playAlertTone();
+    stopEmergencyAlarm();
+    alarmInterval = setInterval(() => {
+      if (!$("fallAlertModal") || !$("fallAlertModal").classList.contains("open")) {
+        stopEmergencyAlarm();
+      } else {
+        playAlertTone();
+      }
+    }, 2400);
+  }
+
+  function stopEmergencyAlarm() {
+    if (alarmInterval) {
+      clearInterval(alarmInterval);
+      alarmInterval = null;
+    }
+  }
+
+  // ---------- System & Lockscreen Notifications ----------
+
+  async function triggerSystemNotification(evt) {
+    if ($("setLockscreenNotify") && !$("setLockscreenNotify").checked) return;
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    const resName = (state.resident && state.resident.name) || "Resident";
+    const room = evt.room || (evt.camera_name ? evt.camera_name.split(" ")[0] : "Room");
+    const conf = Math.round((evt.confidence || 0.95) * 100);
+    const title = evt.notification_title || `🚨 SafeWatch Fall Alert: ${resName}!`;
+    const body = evt.notification_body || `CRITICAL: Sudden fall detected in ${room} (${conf}% confidence). Tap to view live camera & alert emergency contacts immediately.`;
+    const snapshotUrl = evt.photo_url || "/static/icon-512.png";
+    const absoluteSnapshot = snapshotUrl.startsWith("http") ? snapshotUrl : `${location.origin}${snapshotUrl}`;
+
+    // Intense vibration pattern for smartphones in sleep mode or pocket
+    const vibratePattern = ($("setVibrationPattern") && !$("setVibrationPattern").checked)
+      ? [200, 100, 200]
+      : [500, 200, 500, 200, 500, 300, 1000];
+
+    if ("vibrate" in navigator) {
+      try { navigator.vibrate(vibratePattern); } catch {}
+    }
+
+    const notifOptions = {
+      body,
+      icon: "/static/icon-192.png",
+      badge: "/static/icon-192.png",
+      image: absoluteSnapshot,
+      tag: `safewatch-fall-${evt.id}`,
+      renotify: true,
+      requireInteraction: true, // Remains on lockscreen until caregiver swipes or taps
+      vibrate: vibratePattern,
+      data: {
+        url: `/#event-${evt.id}`,
+        event_id: evt.id,
+        call_phone: (state.resident && state.resident.phone) || "",
+      },
+      actions: [
+        { action: "view", title: "🚨 View Situation" },
+        { action: "call", title: "📞 Call Emergency" },
+      ],
+    };
+
+    // 1. Service Worker showNotification (supports lock screen notifications on mobile & OS level)
+    if (state.swRegistration && typeof state.swRegistration.showNotification === "function") {
+      try {
+        await state.swRegistration.showNotification(title, notifOptions);
+        return;
+      } catch (err) {
+        console.warn("ServiceWorker showNotification error, falling back:", err);
+      }
+    }
+
+    // 2. Direct Web Notification fallback (desktop browsers)
+    try {
+      const n = new Notification(title, notifOptions);
+      n.onclick = () => {
+        window.focus();
+        showFallAlertModal(evt);
+        n.close();
+      };
+    } catch (err) {
+      console.warn("Notification constructor error:", err);
+    }
+  }
+
+  async function initServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      state.swRegistration = reg;
+
+      navigator.serviceWorker.addEventListener("message", (ev) => {
+        if (ev.data && ev.data.type === "FOCUS_ALERT" && ev.data.event_id) {
+          const found = state.events.find((e) => e.id === ev.data.event_id);
+          if (found) showFallAlertModal(found);
+        }
+      });
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        await registerBackendSubscription(reg);
+      }
+    } catch (err) {
+      console.warn("ServiceWorker registration note:", err);
+    }
+  }
+
+  async function registerBackendSubscription(reg) {
+    try {
+      let sub = null;
+      if (reg && reg.pushManager) {
+        sub = await reg.pushManager.getSubscription();
+      }
+      const endpoint = sub ? sub.endpoint : `local-${navigator.userAgent.slice(0, 32)}`;
+      let p256dh = "";
+      let auth = "";
+      if (sub && sub.toJSON) {
+        const j = sub.toJSON();
+        p256dh = (j.keys && j.keys.p256dh) || "";
+        auth = (j.keys && j.keys.auth) || "";
+      }
+      await api("/api/notifications/subscribe", {
+        method: "POST",
+        body: JSON.stringify({
+          endpoint,
+          keys: { p256dh, auth },
+          device_name: navigator.userAgent.includes("Mobile") ? "Caregiver Smartphone" : "Caregiver PC / Desktop",
+        }),
+      });
+    } catch (e) {
+      console.warn("Backend notification registration note:", e);
+    }
+  }
+
+  function updateNotificationUi() {
+    if (!("Notification" in window)) {
+      if ($("notifStatusPill")) {
+        $("notifStatusPill").textContent = "Not Supported";
+        $("notifStatusPill").className = "pill pill-denied";
+      }
+      if ($("btnHeaderNotify")) $("btnHeaderNotify").style.display = "none";
+      if ($("notificationBanner")) $("notificationBanner").style.display = "none";
+      return;
+    }
+
+    const perm = Notification.permission;
+    state.notificationPermission = perm;
+
+    const pill = $("notifStatusPill");
+    const banner = $("notificationBanner");
+    const headerBtn = $("btnHeaderNotify");
+    const enableBtn = $("btnEnableNotifications");
+
+    if (perm === "granted") {
+      if (pill) {
+        pill.textContent = "🔔 Granted (Active)";
+        pill.className = "pill pill-granted";
+      }
+      if (banner) banner.style.display = "none";
+      if (headerBtn) {
+        headerBtn.textContent = "🔔 Alerts Active";
+        headerBtn.classList.remove("btn-outline");
+        headerBtn.classList.add("btn-secondary");
+      }
+      if (enableBtn) {
+        enableBtn.textContent = "✅ Lock Screen Alerts Enabled";
+        enableBtn.disabled = true;
+      }
+    } else if (perm === "denied") {
+      if (pill) {
+        pill.textContent = "❌ Blocked in Browser";
+        pill.className = "pill pill-denied";
+      }
+      if (banner) banner.style.display = "none";
+      if (headerBtn) {
+        headerBtn.textContent = "🔕 Blocked";
+        headerBtn.classList.add("btn-outline");
+      }
+      if (enableBtn) {
+        enableBtn.textContent = "⚠️ Permission Blocked";
+        enableBtn.disabled = true;
+      }
+    } else {
+      if (pill) {
+        pill.textContent = "⚠️ Permission Required";
+        pill.className = "pill pill-default";
+      }
+      if (banner && !state.dismissedNotificationBanner) {
+        banner.style.display = "flex";
+      }
+      if (headerBtn) {
+        headerBtn.textContent = "🔔 Enable Alerts";
+        headerBtn.classList.add("btn-outline");
+      }
+      if (enableBtn) {
+        enableBtn.textContent = "🔔 Enable Lock Screen Alerts";
+        enableBtn.disabled = false;
+      }
+    }
+  }
+
+  async function requestNotificationPermission() {
+    if (!("Notification" in window)) {
+      showToast("Web Notifications are not supported in this browser.");
+      return;
+    }
+    try {
+      const res = await Notification.requestPermission();
+      updateNotificationUi();
+      if (res === "granted") {
+        showToast("Notifications enabled! You will receive lock screen alerts even during sleep mode.");
+        if (state.swRegistration) {
+          await registerBackendSubscription(state.swRegistration);
+        }
+      } else if (res === "denied") {
+        showToast("Notification permission was denied. Please allow notifications in site settings.");
+      }
+    } catch (e) {
+      showToast(`Permission error: ${e.message}`);
+    }
   }
 
   // ---------- Tab Navigation & Modals ----------
@@ -102,6 +331,9 @@
 
   function closeModal(id) {
     $(id).classList.remove("open");
+    if (id === "fallAlertModal") {
+      stopEmergencyAlarm();
+    }
   }
 
   // ---------- Rendering ----------
@@ -492,6 +724,7 @@
     $("alertBtnFalse").onclick = () => resolveEvent(evt.id, "false_alert", "Marked as false alert by caregiver");
 
     openModal("fallAlertModal");
+    startEmergencyAlarm();
   }
 
   async function resolveEvent(eventId, status, logAction) {
@@ -769,6 +1002,7 @@
         renderEvents();
         if (msg.event.event_type === "fall" || msg.event.event_type === "inactivity") {
           playAlertTone();
+          triggerSystemNotification(msg.event);
           showFallAlertModal(msg.event);
         }
       } else if (msg.type === "event_updated") {
@@ -1156,11 +1390,54 @@
       await refreshState();
       showToast("Emergency contact added");
     };
+
+    // Notification Controls
+    if ($("btnHeaderNotify")) {
+      $("btnHeaderNotify").onclick = () => {
+        if (Notification.permission === "granted") {
+          switchTab("settings");
+        } else {
+          requestNotificationPermission();
+        }
+      };
+    }
+    if ($("btnBannerEnableNotify")) {
+      $("btnBannerEnableNotify").onclick = () => requestNotificationPermission();
+    }
+    if ($("btnBannerDismissNotify")) {
+      $("btnBannerDismissNotify").onclick = () => {
+        state.dismissedNotificationBanner = true;
+        if ($("notificationBanner")) $("notificationBanner").style.display = "none";
+      };
+    }
+    if ($("btnEnableNotifications")) {
+      $("btnEnableNotifications").onclick = () => requestNotificationPermission();
+    }
+    if ($("btnTestNotification")) {
+      $("btnTestNotification").onclick = async () => {
+        const btn = $("btnTestNotification");
+        btn.disabled = true;
+        try {
+          if ("Notification" in window && Notification.permission !== "granted") {
+            await Notification.requestPermission();
+            updateNotificationUi();
+          }
+          await api("/api/notifications/test", { method: "POST" });
+          showToast("Test lockscreen alert sent! Lock phone or switch apps to verify.");
+        } catch (e) {
+          showToast(`Test error: ${e.message}`);
+        } finally {
+          btn.disabled = false;
+        }
+      };
+    }
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
     bindUiEvents();
     initRoiDrawing();
+    initServiceWorker();
+    updateNotificationUi();
     try {
       await refreshState();
       connectWebSocket();

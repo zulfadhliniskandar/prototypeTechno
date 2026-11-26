@@ -531,9 +531,103 @@ def create_app(
             await cam_manager.unregister_standby_node(node_id)
         return ws
 
+    # ---------- Service Worker & PWA Manifest ----------
+
+    async def service_worker_file(_request: web.Request) -> web.Response:
+        sw_path = STATIC_DIR / "sw.js"
+        if not sw_path.exists():
+            return web.Response(status=404, text="sw.js not found")
+        content = sw_path.read_text(encoding="utf-8")
+        return web.Response(
+            body=content,
+            content_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"},
+        )
+
+    async def manifest_file(_request: web.Request) -> web.Response:
+        m_path = STATIC_DIR / "manifest.json"
+        if not m_path.exists():
+            return web.Response(status=404, text="manifest.json not found")
+        content = m_path.read_text(encoding="utf-8")
+        return web.Response(
+            body=content,
+            content_type="application/manifest+json",
+            headers={"Cache-Control": "no-cache"},
+        )
+
+    # ---------- Notification Endpoints ----------
+
+    async def subscribe_notification(request: web.Request) -> web.Response:
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response({"error": "Invalid JSON"}, status=400)
+        endpoint = (payload.get("endpoint") or "").strip()
+        if not endpoint:
+            return web.json_response({"error": "endpoint is required"}, status=400)
+        keys = payload.get("keys") or {}
+        p256dh = keys.get("p256dh", "")
+        auth = keys.get("auth", "")
+        ua = request.headers.get("User-Agent", "")
+        device_name = payload.get("device_name") or "Caregiver Smartphone / Browser"
+        sub = database.save_notification_subscription(
+            endpoint=endpoint,
+            p256dh=p256dh,
+            auth=auth,
+            user_agent=ua,
+            device_name=device_name,
+        )
+        return web.json_response({"status": "subscribed", "subscription": sub})
+
+    async def get_notification_status(_request: web.Request) -> web.Response:
+        subs = database.list_notification_subscriptions()
+        return web.json_response(
+            {
+                "supported": True,
+                "subscriptions_count": len(subs),
+                "subscriptions": subs,
+                "push_mode": "service_worker_notification",
+            }
+        )
+
+    async def trigger_test_notification(_request: web.Request) -> web.Response:
+        res = database.get_resident_profile()
+        res_name = res.get("name") or "Resident"
+        test_evt_id = f"test-{uuid.uuid4().hex[:8]}"
+        cams = database.list_cameras()
+        room = cams[0]["room"] if cams else "Living Room"
+        test_event = {
+            "id": test_evt_id,
+            "camera_id": cams[0]["id"] if cams else None,
+            "camera_name": cams[0]["name"] if cams else "Phone Camera (Test)",
+            "room": room,
+            "phone_ip": cams[0]["ip_address"] if cams else "192.168.1.100",
+            "event_type": "fall",
+            "confidence": 0.98,
+            "photo_filename": None,
+            "video_filename": None,
+            "duration_sec": 4.5,
+            "status": "pending",
+            "notes": "Simulated lockscreen / background test fall alert",
+            "created_at": utc_now_iso(),
+            "resolved_at": None,
+            "photo_url": "/static/icon-512.png",
+            "video_url": None,
+            "response_logs": [],
+            "is_test": True,
+            "notification_title": f"🚨 SafeWatch Fall Alert: {res_name}!",
+            "notification_body": f"CRITICAL: Fall detected in {room} (98% confidence). Tap to view live camera.",
+        }
+        await cam_manager.broadcast_caregiver(
+            {"type": "new_alert", "event": test_event, "is_test": True}
+        )
+        return web.json_response({"status": "dispatched", "event": test_event})
+
     # ---------- Route Table ----------
 
     app.router.add_get("/", index_page)
+    app.router.add_get("/sw.js", service_worker_file)
+    app.router.add_get("/manifest.json", manifest_file)
     app.router.add_get("/phone-camera", phone_camera_page)
     app.router.add_get("/camera-node", phone_camera_page)
     app.router.add_get("/favicon.ico", lambda _r: web.Response(status=204))
@@ -545,6 +639,10 @@ def create_app(
     app.router.add_put("/api/resident", update_resident)
     app.router.add_put("/api/settings", update_settings)
     app.router.add_post("/api/events/purge", purge_events)
+
+    app.router.add_get("/api/notifications/status", get_notification_status)
+    app.router.add_post("/api/notifications/subscribe", subscribe_notification)
+    app.router.add_post("/api/notifications/test", trigger_test_notification)
 
     app.router.add_get("/api/contacts", list_contacts)
     app.router.add_post("/api/contacts", create_contact)

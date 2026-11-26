@@ -974,12 +974,7 @@ body {
   background: var(--primary-light);
 }
 
-@media (max-width: 760px) {
-  .desktop-nav { display: none; }
-  .bottom-nav { display: flex; }
-  .ws-pill span.ws-text { display: none; }
-  .container { padding: 14px; }
-}
+/* (760px breakpoint moved to responsive section below) */
 
 .empty-state {
   text-align: center;
@@ -1003,3 +998,499 @@ body {
 }
 
 .toast.show { display: block; }
+
+/* Notification Banner & Sleep-Mode Badges */
+.alert-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #fff;
+  border-radius: var(--radius-card);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-left: 5px solid #e11d48;
+}
+
+.alert-banner .banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.alert-banner .banner-icon {
+  font-size: 26px;
+  animation: pulse-bell 2.5s infinite;
+}
+
+@keyframes pulse-bell {
+  0%, 100% { transform: rotate(0deg); }
+  10%, 30% { transform: rotate(14deg); }
+  20%, 40% { transform: rotate(-14deg); }
+  50% { transform: rotate(0deg); }
+}
+
+.alert-banner .banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.pill-granted {
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+}
+
+.pill-denied {
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.pill-default {
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.notif-feature-box {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  padding: 12px 14px;
+  margin: 12px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* ================================================================
+   NEW RESPONSIVE CLASSES (for HTML elements added in prior session)
+   ================================================================ */
+
+/* Button text toggle: full text visible by default, compact hidden */
+.btn-text-full  { display: inline; }
+.btn-text-compact { display: none; }
+
+/* Camera view controls wrapper */
+.cam-view-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cam-size-chips {
+  display: flex;
+  gap: 6px;
+}
+
+/* Fall alert action grid */
+.alert-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+/* ================================================================
+   GLOBAL POLISH (all sizes)
+   ================================================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ensure all interactive targets are ≥ 44px for touch */
+.btn { white-space: nowrap; min-height: 44px; }
+.btn-sm { min-height: 38px; }
+.icon-btn { min-width: 44px; min-height: 44px; }
+
+/* Word wrap safety for dynamic text */
+.hero-title, .cam-name, .section-title { word-break: break-word; }
+
+/* Toggle row spacing fix */
+.toggle-row { gap: 12px; }
+
+/* Modal touch-scroll */
+.modal { -webkit-overflow-scrolling: touch; }
+.modal-backdrop { overscroll-behavior: contain; }
+
+/* Focus-visible accessibility outlines */
+.btn:focus-visible,
+.icon-btn:focus-visible,
+.chip:focus-visible,
+.nav-tab:focus-visible,
+.quick-btn:focus-visible,
+.switch input:focus-visible + .slider,
+.method-tab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Smooth grid/layout transitions */
+.dashboard-split,
+.camera-grid,
+.settings-grid,
+.form-grid,
+.quick-actions,
+.method-tabs,
+.hero-card {
+  transition: gap 0.2s ease;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+}
+
+/* ================================================================
+   TABLET BREAKPOINT (760px – 1024px)
+   ================================================================ */
+
+@media (max-width: 1024px) {
+  .topbar { padding: 10px 16px; }
+
+  .nav-tab {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  .camera-grid {
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  }
+
+  .settings-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .hero-card { padding: 20px; gap: 16px; }
+  .hero-emoji { width: 50px; height: 50px; font-size: 24px; }
+  .hero-title { font-size: 20px; }
+
+  .expand-feed-wrap img { max-height: 58vh; }
+
+  .modal-body { padding: 18px 20px; }
+  .modal-header { padding: 16px 20px; }
+  .modal-footer { padding: 12px 20px; }
+}
+
+/* ================================================================
+   LARGE PHONE / EXISTING MOBILE (≤ 760px) — Enhanced
+   ================================================================ */
+
+@media (max-width: 760px) {
+  /* Nav swap (existing) */
+  .desktop-nav { display: none; }
+  .bottom-nav {
+    display: flex;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  .container { padding: 14px; }
+  .ws-pill span.ws-text { display: none; }
+
+  /* Button text: show compact, hide full */
+  .btn-text-full  { display: none; }
+  .btn-text-compact { display: inline; }
+
+  /* Topbar tighter */
+  .topbar { padding: 8px 14px; }
+  .topbar-actions { gap: 6px; }
+  .topbar-inner { gap: 10px; }
+
+  /* Brand shrink */
+  .brand-icon { width: 36px; height: 36px; border-radius: 10px; font-size: 16px; }
+  .brand-title { font-size: 17px; }
+
+  /* Hero card stack on mobile */
+  .hero-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 18px;
+    gap: 14px;
+  }
+  .hero-left {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  .hero-emoji { width: 48px; height: 48px; font-size: 24px; border-radius: 14px; }
+  .hero-title { font-size: 19px; }
+  .hero-sub { font-size: 13px; }
+  .hero-actions { justify-content: center; }
+
+  /* Dashboard force single column */
+  .dashboard-split { grid-template-columns: 1fr; }
+
+  /* Camera feed smaller */
+  .cam-feed-wrap { min-height: 220px; }
+  .camera-grid.size-cinema .cam-feed-wrap { min-height: 300px; max-height: 55vh; }
+
+  /* Camera view controls stack */
+  .cam-view-controls { gap: 8px; }
+  .cam-size-chips { gap: 4px; }
+  .cam-size-chips .chip { padding: 5px 10px; font-size: 12px; }
+
+  /* Smaller cards */
+  .card { padding: 16px; }
+  .section-title { font-size: 16px; }
+
+  /* Modals */
+  .modal { border-radius: 16px; }
+  .modal-body { padding: 16px; }
+  .modal-header { padding: 14px 16px; }
+  .modal-footer { padding: 12px 16px; }
+
+  /* Expand camera modal */
+  .expand-feed-wrap img { max-height: 50vh; }
+  .modal-xl { width: 100vw; max-width: 100vw; border-radius: 14px; }
+
+  /* State stepper */
+  .state-stepper { gap: 6px; }
+  .state-step { padding: 6px 4px; font-size: 11px; }
+
+  /* Filter bar */
+  .filter-bar select.input { min-width: 110px !important; font-size: 13px; }
+
+  /* Event items */
+  .event-thumb { width: 68px; height: 48px; border-radius: 8px; }
+  .event-item { padding: 10px; gap: 10px; }
+  .event-title { font-size: 13.5px; }
+  .event-sub { font-size: 12px; }
+
+  /* Settings grid single column */
+  .settings-grid { grid-template-columns: 1fr; gap: 14px; }
+
+  /* Method tabs in connect modal */
+  .method-tabs { grid-template-columns: 1fr; gap: 6px; }
+  .method-tab { font-size: 13px; padding: 10px 8px; }
+
+  /* QR box */
+  .qr-box { flex-direction: column; align-items: center; text-align: center; }
+  .qr-box img { width: 120px; height: 120px; }
+
+  /* Alert banner stack */
+  .alert-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 14px;
+    gap: 12px;
+    border-left: none;
+    border-top: 4px solid #e11d48;
+  }
+  .alert-banner .banner-left {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  .alert-banner .banner-actions { justify-content: center; }
+
+  /* Alert actions grid */
+  .alert-actions-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Media preview */
+  .media-preview { max-height: 260px; }
+
+  /* Toast repositioned */
+  .toast {
+    left: 14px;
+    right: 14px;
+    bottom: 72px;
+    text-align: center;
+  }
+
+  /* Form grid */
+  .form-grid { gap: 10px; }
+
+  /* Quick actions */
+  .quick-actions { gap: 10px; }
+  .quick-btn { padding: 12px 14px; font-size: 13px; }
+  .quick-icon { width: 34px; height: 34px; font-size: 16px; }
+
+  /* ROI stage smaller */
+  .roi-stage { border-radius: 10px; }
+
+  /* Notification feature box */
+  .notif-feature-box { font-size: 12px; padding: 10px 12px; }
+}
+
+/* ================================================================
+   SMALL PHONE (≤ 480px)
+   ================================================================ */
+
+@media (max-width: 480px) {
+  .topbar { padding: 8px 10px; }
+  .topbar-inner { gap: 6px; }
+  .topbar-actions { gap: 4px; }
+
+  /* Brand ultra-compact */
+  .brand { gap: 8px; }
+  .brand-icon { width: 32px; height: 32px; border-radius: 8px; font-size: 14px; }
+  .brand-title { font-size: 15px; }
+  .brand-sub { display: none; }
+
+  /* Container minimal padding */
+  .container { padding: 10px; }
+  body { padding-bottom: 68px; }
+
+  /* Hero card compact */
+  .hero-card { padding: 14px; gap: 10px; border-radius: 16px; }
+  .hero-emoji { width: 42px; height: 42px; font-size: 20px; border-radius: 12px; }
+  .hero-title { font-size: 17px; }
+  .hero-sub { font-size: 12px; }
+
+  /* Quick actions 2-column */
+  .quick-actions { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .quick-btn { padding: 10px 12px; font-size: 12px; gap: 8px; }
+  .quick-icon { width: 30px; height: 30px; font-size: 14px; border-radius: 8px; }
+
+  /* Camera grid force single column */
+  .camera-grid { grid-template-columns: 1fr !important; }
+  .cam-feed-wrap { min-height: 180px; }
+  .camera-grid.size-cinema .cam-feed-wrap { min-height: 240px; }
+
+  /* Cards compact */
+  .card { padding: 14px; border-radius: 14px; }
+  .section-title { font-size: 15px; }
+  .section-header { gap: 8px; margin-bottom: 10px; }
+
+  /* Modal */
+  .modal { border-radius: 14px; max-height: 94vh; }
+  .modal-body { padding: 12px 14px; }
+  .modal-header { padding: 12px 14px; }
+  .modal-footer { padding: 10px 14px; gap: 8px; }
+
+  /* State stepper 2×2 grid */
+  .state-stepper { grid-template-columns: repeat(2, 1fr); gap: 4px; }
+  .state-step { padding: 5px 4px; font-size: 10px; border-radius: 8px; }
+
+  /* Event items ultra-compact */
+  .event-thumb { width: 56px; height: 40px; border-radius: 6px; }
+  .event-item { padding: 8px; gap: 8px; border-radius: 10px; }
+  .event-title { font-size: 13px; gap: 4px; }
+  .event-sub { font-size: 11px; }
+
+  /* Filter bar chips + selects */
+  .filter-bar { gap: 6px; }
+  .filter-bar select.input { min-width: 100px !important; font-size: 12px; }
+  .chip { padding: 5px 10px; font-size: 12px; }
+
+  /* Form grid single column */
+  .form-grid { grid-template-columns: 1fr; gap: 8px; }
+
+  /* Settings grid */
+  .settings-grid { gap: 12px; }
+
+  /* Method tabs */
+  .method-tabs { gap: 4px; }
+  .method-tab { padding: 8px 6px; font-size: 12px; }
+
+  /* QR box smaller */
+  .qr-box { padding: 12px; gap: 12px; }
+  .qr-box img { width: 100px; height: 100px; }
+
+  /* Alert banner */
+  .alert-banner { padding: 12px; gap: 10px; border-radius: 12px; }
+  .alert-banner .banner-icon { font-size: 22px; }
+
+  /* Alert actions grid single column */
+  .alert-actions-grid { grid-template-columns: 1fr; gap: 6px; }
+
+  /* Toggle row */
+  .toggle-row { padding: 8px 0; gap: 10px; }
+  .toggle-row strong { font-size: 13px; }
+  .toggle-row .muted { font-size: 11.5px; }
+
+  /* Bottom nav safe area */
+  .bottom-nav {
+    padding: 4px 6px;
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  }
+  .bottom-nav button { font-size: 10px; padding: 5px 8px; }
+
+  /* Toast */
+  .toast { left: 10px; right: 10px; bottom: 64px; font-size: 12px; padding: 10px 12px; }
+
+  /* Expand modal telemetry pills */
+  .pill { padding: 3px 8px; font-size: 11px; }
+
+  /* Media preview */
+  .media-preview { max-height: 200px; }
+
+  /* Notification feature box */
+  .notif-feature-box { font-size: 11.5px; padding: 10px; }
+
+  /* ROI stage */
+  .roi-stage { border-radius: 8px; }
+
+  /* Icon buttons on mobile: enforce touch size */
+  .icon-btn { width: 44px; height: 44px; font-size: 16px; }
+
+  /* Cam body tighter */
+  .cam-body { padding: 10px 12px; gap: 8px; }
+  .cam-name { font-size: 14px; }
+  .cam-meta { font-size: 11.5px; }
+
+  /* Camera expand button */
+  .cam-expand-fab { font-size: 11px; padding: 4px 8px; }
+
+  /* Buttons */
+  .btn { padding: 8px 12px; font-size: 13px; min-height: 40px; }
+  .btn-sm { padding: 6px 10px; font-size: 12px; min-height: 34px; }
+
+  /* Expand feed */
+  .expand-feed-wrap img { max-height: 42vh; }
+  .expand-feed-wrap { border-radius: 10px; }
+
+  /* Timeline */
+  .timeline { padding-left: 10px; gap: 8px; }
+  .timeline-item { font-size: 12px; }
+  .timeline-item::before { width: 7px; height: 7px; left: -14px; }
+
+  /* Cam view controls */
+  .cam-view-controls { justify-content: center; }
+}
+
+/* ================================================================
+   ULTRA-WIDE (≥ 1600px)
+   ================================================================ */
+
+@media (min-width: 1600px) {
+  .container { max-width: 1680px; }
+
+  .camera-grid {
+    grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+  }
+
+  .dashboard-split {
+    grid-template-columns: 2.4fr 0.6fr;
+    gap: 28px;
+  }
+
+  .hero-card { padding: 28px; }
+  .hero-emoji { width: 64px; height: 64px; font-size: 32px; }
+  .hero-title { font-size: 24px; }
+}
+
